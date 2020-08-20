@@ -6,7 +6,7 @@ M2,M8 and M2M8 are run by using the corresponding set of parameters with the Hea
 M1,M3A and M3B are run by using the Healthy set of parameters with the corresponding set of GRN.
 Still need to implement M4-7 models.
 
-##Software
+## Software
 All software is written in Rstudio.
 
 ## Reference
