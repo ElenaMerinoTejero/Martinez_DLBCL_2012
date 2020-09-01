@@ -92,11 +92,12 @@ setGRN<-function(type_)
   }
   else if(type_=="DLBCLM3A") #DLBCL: Uncoment to run M3 model where IRF4 inhibitory effect over BCL6 has been removed.
   {
-    GRN<-function(t,y,pars){
+   GRN<-function(t,y,pars){
       with(as.list(c(y,pars)), {
         dBLIMP1 <- MuP + SigmaP*kB^2/(kB^2 + BCL6^2) + SigmaP*IRF4^2/(kI^2 + IRF4^2) - LambdaP*BLIMP1 
-        dBCL6 <- MuB + SigmaB*kB^2/(kB^2 + BCL6^2)*kP^2/(kP^2 + BLIMP1^2)#*kI^2/(kI^2 + IRF4^2) 
-        - (LambdaB + bcr0*kB^2/(kB^2 + BCL6^2))*BCL6
+        dBCL6 <- MuB + SigmaB*kB^2/(kB^2 + BCL6^2)*kP^2/(kP^2 + BLIMP1^2) - 
+        #*kI^2/(kI^2 + IRF4^2) 
+        (LambdaB + bcr0*kB^2/(kB^2 + BCL6^2))*BCL6
         dIRF4 <- MuI + SigmaI*IRF4^2/(kI^2 + IRF4^2) + cd400*kB^2/(kB^2 + BCL6^2) - LambdaI*IRF4
         return(list(c(dBLIMP1,dBCL6,dIRF4)))
       })}
@@ -112,7 +113,7 @@ setGRN<-function(type_)
         dIRF4 <- MuI + SigmaI*IRF4^2/(kI^2 + IRF4^2) + cd400*kB^2/(kB^2 + BCL6^2) - LambdaI*IRF4
         return(list(c(dBLIMP1,dBCL6,dIRF4)))
       })}
-  }s
+  }
   return(GRN)
   }
 ```
@@ -236,15 +237,15 @@ plotResults_bw(0,1,4,4.1,50,5,5.125,"GRN",20,0.1,20,"M2")
 ```
 ```{r}
 jpeg("M3A.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM3A",20,0.1,60,"Healthy")
+plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM3A",20,0.1,10,"Healthy")
 dev.off()
-plotResults_bw(0,1,4,4.1,50,5,5.125,"DLBCLM3A",20,0.1,60,"Healthy")
+plotResults_bw(0,1,4,4.1,50,5,5.125,"DLBCLM3A",20,0.1,10,"Healthy")
 ```
 ```{r}
 jpeg("M3B.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM3B",20,0.1,100,"Healthy")
+plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM3B",20,0.1,10,"Healthy")
 dev.off()
-plotResults_bw(0,1,4,4.1,50,5,5.125,"DLBCLM3B",20,0.1,20,"Healthy")
+plotResults_bw(0,1,4,4.1,50,5,5.125,"DLBCLM3B",20,0.1,10,"Healthy")
 ```
 
 ```{r}
@@ -259,13 +260,4 @@ jpeg("M2M8.jpeg", width = 5, height = 4, units = 'in', res = 300)
 plotResults(0,1,4,4.1,50,5,5.125,"GRN",20,0.01,20,"M2M8")
 dev.off()
 plotResults_bw(0,1,4,4.1,50,5,5.125,"GRN",20,0.01,20,"M2M8")
-```
-
-
-```{r}
-#jpeg("CMYCFOXO.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,1,4,4.1,50,5,5.125,"CMYCFOXO",15,0.1,20,"CMYCFOXO")
-#dev.off()
-#plotResults_bw(0,1,4,4.1,50,5,5.125,"CMYCFOXO",20,0.01,100,"CMYCFOXO")
-
 ```
