@@ -6,6 +6,21 @@ output: html_document
 library("deSolve", lib.loc="/usr/local/lib/R/3.5/site-library")
 ```
 
+```{r}
+A_=1
+bcr_=10
+bcrini_=4
+bcrend_=4.1
+cd40_=5
+cd40ini_=5
+cd40end_=5.125
+typeGRN_="CMYCFOXO"
+xmax_=20
+ymax_=10
+xsteps_=0.01
+typePars_="CMYCFOXO"
+```
+
 #In setPars function, define parameters as function of the type of model desired to run (type_) which can be the healthy or any of the lymphoma models describedin Martinez et al., 2012. 
 #Affinity and bcr/cd40 signals can also be defined externally (A_,bcr_,cd40_) to be able to call this function at several timesteps and change theirvalue acording to protocol (see experiment function).
 #Note: When modeling any of the lymphoma model parameters below always use setGRN type= "GRN".
@@ -19,37 +34,37 @@ setPars<-function(A_,bcr_,cd40_, type_){
             SigmaP=9, SigmaB=100, SigmaI=2.6, 
             kP=1, kB=1, kI=1, 
             LambdaP=1, LambdaB=1, LambdaI=1, 
-            bcr0=bcr_ ,cd400=cd40_)
+            bcr0=bcr_ ,cd400=cd40_, A=A_)
     return(pars) 
   }
-  else if(type_ == "M2")
-  {
-    
-    pars<-c(MuP=1E-6, MuB=2*10 # M2 model
-            , MuI=0.1, SigmaP=9, SigmaB=100, SigmaI=2.6,
-            kP=1, kB=1, kI=1, 
-            LambdaP=1, LambdaB=1, LambdaI=1, 
-            bcr0=bcr_ ,cd400=cd40_)
-    return(pars) 
-  }
-  else if(type_ == "M8")
+    else if(type_ == "M8")
   {
     pars<-c(MuP=1E-6, MuB=2
             , MuI=0.1*2 #M8 model
             ,SigmaP=9, SigmaB=100, SigmaI=2.6*2, #M8 model
             kP=1, kB=1, kI=1, 
             LambdaP=1, LambdaB=1, LambdaI=1, 
-            bcr0=bcr_ ,cd400=cd40_)
+            bcr0=bcr_ ,cd400=cd40_, A=A_)
     return(pars) 
   }
-  else if(type_ == "M2M8")
+   else if(type_ == "CMYCFOXO")
   {
-    pars<-c(MuP=1E-6, MuB=2*10 # M2 model
-            , MuI=0.1*2 #M8 model
-            ,SigmaP=9, SigmaB=100, SigmaI=2.6*2, #M8 model
-            kP=1, kB=1, kI=1,  
-            LambdaP=1, LambdaB=1, LambdaI=1, 
-            bcr0=bcr_ ,cd400=cd40_)
+    pars<-c(MuP=1E-6, MuB=2, MuI=0.1,MuF=1,MuC=1E-6,
+            SigmaP=9, SigmaB=100, SigmaI=2.6,SigmaF=2.6,SigmaC=2.6,
+            kP=1, kB=1, kI=1,kF=1,kC=1,  
+            LambdaP=1, LambdaB=1, LambdaI=1, LambdaF=1,LambdaC=1,
+            bcr0=bcr_ ,cd400=cd40_, A=A_)
+    return(pars) 
+   }
+     else if(type_ == "CMYCFOXO_M8")
+  {
+    pars<-c(MuP=1E-6, MuB=2, MuI=0.1*2 #M8 model
+            ,MuF=1,MuC=1E-6,
+            SigmaP=9, SigmaB=100, SigmaI=2.6*2 #M8 model
+            ,SigmaF=2.6,SigmaC=2.6,
+            kP=1, kB=1, kI=1,kF=1,kC=1,  
+            LambdaP=1, LambdaB=1, LambdaI=1, LambdaF=1,LambdaC=1,
+            bcr0=bcr_ ,cd400=cd40_, A=A_)
     return(pars) 
   }
 }
@@ -57,7 +72,14 @@ setPars<-function(A_,bcr_,cd40_, type_){
 
 ```{r}
 yini<-function(type_){
-  yini<-c(BLIMP1=0,BCL6=5,IRF4=0) 
+  if(type_ == "CMYCFOXO"||type_ == "CMYCFOXO_M8")
+  {
+    yini<-c(IRF4=0,CMYC=0,FOXO1=1,BLIMP1=0,BCL6=5)  # ORDER OF INITIAL CONDITIONS SHOULD ALWAYS MATCH ORDER OF ODE EQUATIONS!
+  }
+  else
+  {
+    yini<-c(BLIMP1=0,BCL6=5,IRF4=0) 
+  }
   return(yini)
 }
 ```
@@ -75,54 +97,20 @@ setGRN<-function(type_)
       with(as.list(c(y,pars)), {
         dBLIMP1 <- MuP + SigmaP*kB^2/(kB^2 + BCL6^2) + SigmaP*IRF4^2/(kI^2 + IRF4^2) - LambdaP*BLIMP1 
         dBCL6 <- MuB + SigmaB*kB^2/(kB^2 + BCL6^2)*kP^2/(kP^2 + BLIMP1^2)*kI^2/(kI^2 + IRF4^2) - (LambdaB + bcr0*kB^2/(kB^2 + BCL6^2))*BCL6
-        dIRF4 <- MuI + SigmaI*IRF4^2/(kI^2 + IRF4^2) + cd400*kB^2/(kB^2 + BCL6^2) - LambdaI*IRF4
+        dIRF4 <- MuI + SigmaI*IRF4^2/(kI^2 + IRF4^2) + (cd400*A)*kB^2/(kB^2 + BCL6^2) - LambdaI*IRF4
         return(list(c(dBLIMP1,dBCL6,dIRF4)))
       })}
   }
-  else if(type_ == "DLBCLM1") # DLBCL: Uncoment to run M1 model where BCL6 autoinhibitory loop has been removed.
+  else if(type_ == "CMYCFOXO") # simplest Martinez model
   {
     GRN<-function(t,y,pars){
       with(as.list(c(y,pars)), {
-        dBLIMP1 <- MuP + SigmaP*kB^2/(kB^2 + BCL6^2) + SigmaP*IRF4^2/(kI^2 + IRF4^2) - LambdaP*BLIMP1 
-        dBCL6 <- MuB + SigmaB*#kB^2/(kB^2 + BCL6^2)*
-          kP^2/(kP^2 + BLIMP1^2)*kI^2/(kI^2 + IRF4^2) - (LambdaB + bcr0*kB^2/(kB^2 + BCL6^2))*BCL6
-        dIRF4 <- MuI + SigmaI*IRF4^2/(kI^2 + IRF4^2) + cd400*kB^2/(kB^2 + BCL6^2) - LambdaI*IRF4
-        return(list(c(dBLIMP1,dBCL6,dIRF4)))
-      })}
-  }
-  else if(type_=="DLBCLM3A") #DLBCL: Uncoment to run M3 model where IRF4 inhibitory effect over BCL6 has been removed.
-  {
-   GRN<-function(t,y,pars){
-      with(as.list(c(y,pars)), {
-        dBLIMP1 <- MuP + SigmaP*kB^2/(kB^2 + BCL6^2) + SigmaP*IRF4^2/(kI^2 + IRF4^2) - LambdaP*BLIMP1 
-        dBCL6 <- MuB + SigmaB*kB^2/(kB^2 + BCL6^2)*kP^2/(kP^2 + BLIMP1^2) - 
-        #*kI^2/(kI^2 + IRF4^2) 
-        (LambdaB + bcr0*kB^2/(kB^2 + BCL6^2))*BCL6
-        dIRF4 <- MuI + SigmaI*IRF4^2/(kI^2 + IRF4^2) + cd400*kB^2/(kB^2 + BCL6^2) - LambdaI*IRF4
-        return(list(c(dBLIMP1,dBCL6,dIRF4)))
-      })}
-  }
-  else if(type_=="DLBCLM3B") #DLBCL: Uncoment to run M3 model where BLIMP1 inhibitory effect over BCL6 has been removed.
-   {
-     GRN<-function(t,y,pars){
-      with(as.list(c(y,pars)), {
-        dBLIMP1 <- MuP + SigmaP*kB^2/(kB^2 + BCL6^2) + SigmaP*IRF4^2/(kI^2 + IRF4^2) - LambdaP*BLIMP1 
-        dBCL6 <- MuB + SigmaB*kB^2/(kB^2 + BCL6^2)*
-          #kP^2/(kP^2 + BLIMP1^2)*
-          kI^2/(kI^2 + IRF4^2) - (LambdaB + bcr0*kB^2/(kB^2 + BCL6^2))*BCL6
-        dIRF4 <- MuI + SigmaI*IRF4^2/(kI^2 + IRF4^2) + cd400*kB^2/(kB^2 + BCL6^2) - LambdaI*IRF4
-        return(list(c(dBLIMP1,dBCL6,dIRF4)))
-      })}
-  }
-   else if(type_=="DLBCLM4") #DLBCL: Uncoment to run M4 model where BLIMP1 has been removed.
-   {
-     GRN<-function(t,y,pars){
-      with(as.list(c(y,pars)), {
-        dBLIMP1 <- 0#MuP + SigmaP*kB^2/(kB^2 + BCL6^2) + SigmaP*IRF4^2/(kI^2 + IRF4^2) - LambdaP*BLIMP1 
-        dBCL6 <- MuB + SigmaB*kB^2/(kB^2 + BCL6^2)*kP^2/(kP^2 + BLIMP1^2)*
-          kI^2/(kI^2 + IRF4^2) - (LambdaB + bcr0*kB^2/(kB^2 + BCL6^2))*BCL6
-        dIRF4 <- MuI + SigmaI*IRF4^2/(kI^2 + IRF4^2) + cd400*kB^2/(kB^2 + BCL6^2) - LambdaI*IRF4
-        return(list(c(dBLIMP1,dBCL6,dIRF4)))
+        dIRF4 <- MuI + SigmaI*IRF4^2/(kI^2 + IRF4^2)  + (cd400*A)*kB^2/(kB^2 + BCL6^2) - LambdaI*IRF4
+        dCMYC <- MuC + SigmaC*(kF^2/(kF^2+FOXO1^2))  + SigmaC*(kP^2/(kP^2+BLIMP1^2)) + SigmaC*IRF4^2/(kI^2 + IRF4^2) - LambdaC*CMYC
+        dFOXO1 <- MuF - bcr0  -LambdaF*FOXO1 -(cd400*A)
+        dBLIMP1 <- MuP + SigmaP*kB^2/(kB^2 + BCL6^2) + SigmaP*IRF4^2/(kI^2 + IRF4^2) + SigmaP*FOXO1^2/(kF^2 + FOXO1^2) - LambdaP*BLIMP1 
+        dBCL6 <- MuB + SigmaB*kB^2/(kB^2 + BCL6^2)*kP^2/(kP^2 + BLIMP1^2)*kI^2/(kI^2 + IRF4^2) - (LambdaB + bcr0*kB^2/(kB^2 + BCL6^2))*BCL6
+        return(list(c(dIRF4,dCMYC,dFOXO1,dBLIMP1,dBCL6)))
       })}
   }
   return(GRN)
@@ -180,7 +168,7 @@ plotResults<-function(A_,bcr_,bcrini_,bcrend_,cd40_,cd40ini_,cd40end_,typeGRN_,x
   data_<-experiment(A_,bcr_,bcrini_,bcrend_,cd40_,cd40ini_,cd40end_,typeGRN_,xmax_,xsteps_,typePars_)
   pars<- setPars(A_,bcr_,cd40_,typePars_)
   #list of colours for lines and legend
-  colourlist<-c("orange","green","black","purple","red","blue","pink","gold")
+  colourlist<-c("green","cyan","blue","black","red","orange","blue","gold")
   plot(data_$time, data_[[2]],xlab="time (4hrs)",
        ylab="Concentration (10^-8 M)",
        type="l", col=colourlist[[1]], 
@@ -190,9 +178,9 @@ plotResults<-function(A_,bcr_,bcrini_,bcrend_,cd40_,cd40ini_,cd40end_,typeGRN_,x
   {
     lines(data_$time,data_[[i]],col=colourlist[[i-1]])
   }
-  lines(data_$time,data_[[length(data_)-1]]/(cd40_/ymax_),col=colourlist[[5]])  
-  lines(data_$time,data_[[length(data_)]]/(cd40_/ymax_),col=colourlist[[6]])
-  legend(xmax_-5,ymax_,c(names(data_)[2],names(data_)[3],names(data_)[4],names(data_)[5],names(data_)[6]), text.col = c(colourlist[[1]],colourlist[[2]],colourlist[[3]],colourlist[[4]],colourlist[[5]]),bty="n")
+  lines(data_$time,data_[[length(data_)-1]],col=colourlist[[6]])  
+  lines(data_$time,data_[[length(data_)]],col=colourlist[[7]])
+  legend(xmax_-2,ymax_,c(names(data_)[2],names(data_)[3],names(data_)[4],names(data_)[5],names(data_)[6]), text.col = c(colourlist[[1]],colourlist[[2]],colourlist[[3]],colourlist[[4]],colourlist[[5]]),bty="n")
   #  axis(4,at= c(0,cd40_),labels=c(0,cd40_),las=0)
  # mtext("Signaling ", side=4, line=-1.5, col="black" ,las=0)
 
@@ -224,64 +212,51 @@ plotResults_bw<-function(A_,bcr_,bcrini_,bcrend_,cd40_,cd40ini_,cd40end_,typeGRN
 }
 ```
 
-#Generate plots for every healthy and deseased simulation with same affinity, bcr and cd40 signal dynamics.
+
 ```{r}
-jpeg("healthy.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,1,4,4.1,50,5,5.125,"GRN",15,0.01,10,"Healthy")
+#plotting Antoines Network (with his parameters)
+jpeg("AntoinesBCLnetwork.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,12,45,45.1,5,60,60.1,"CMYCFOXO",200,0.1,15,"CMYCFOXO")
 dev.off()
-plotResults(0,1,4,4.1,50,5,5.125,"GRN",20,0.01,10,"Healthy")
 
 ```
 
-```{r}
-jpeg("M1.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM1",20,0.1,100,"Healthy")
-dev.off()
-plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM1",20,0.1,100,"Healthy")
-```
 
 ```{r}
-jpeg("M2.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,1,4,4.1,50,5,5.125,"GRN",20,0.1,20,"M2")
+jpeg("Healthy_A1.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(1,1,4,4.1,50,5,5.125,"GRN",15,0.01,15,"Healthy")
 dev.off()
-plotResults(0,1,4,4.1,50,5,5.125,"GRN",20,0.1,20,"M2")
+jpeg("M8_A1.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(1,1,4,4.1,50,5,5.125,"GRN",15,0.01,15,"M8")
+dev.off()
 ```
 ```{r}
-jpeg("M3A.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM3A",20,0.1,10,"Healthy")
+#CC recycling takes 10 hrs (MYC increase)
+#PC differentiation can take between 10 and 34 hours (recycling + divisions)
+
+jpeg("CMYCFOXO_A0.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,1,4,4.1,50,5,5.125,"CMYCFOXO",14,0.1,15,"CMYCFOXO")
 dev.off()
-plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM3A",20,0.1,10,"Healthy")
-```
-```{r}
-jpeg("M3B.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM3B",20,0.1,10,"Healthy")
+jpeg("CMYCFOXO_A0.5.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0.5,1,4,4.1,50,5,5.125,"CMYCFOXO",8,0.1,15,"CMYCFOXO")
+plotResults(0.5,1,4,4.1,50,5,5.125,"CMYCFOXO",14,0.1,15,"CMYCFOXO")
 dev.off()
-plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM3B",20,0.1,10,"Healthy")
-```
-```{r}
-jpeg("M4.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM4",20,0.1,10,"Healthy")
+jpeg("CMYCFOXO_A1.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(1,1,4,4.1,50,5,5.125,"CMYCFOXO",8,0.1,15,"CMYCFOXO")
 dev.off()
-plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM4",20,0.1,10,"Healthy")
+
 ```
 
-```{r}
-jpeg("hM8.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,1,4,4.1,50,5,5.125,"GRN",20,0.01,20,"M8")
-dev.off()
-plotResults(0,1,4,4.1,50,5,5.125,"GRN",20,0.01,20,"M8")
-```
 
 ```{r}
-jpeg("M2M8.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,1,4,4.1,50,5,5.125,"GRN",20,0.01,20,"M2M8")
+jpeg("CMYCFOXO_M8_A0.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,1,4,4.1,50,5,5.125,"CMYCFOXO",8,0.1,15,"CMYCFOXO_M8")
 dev.off()
-plotResults(0,1,4,4.1,50,5,5.125,"GRN",20,0.01,20,"M2M8")
+jpeg("CMYCFOXO_M8_A0.5.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0.5,1,4,4.1,50,5,5.125,"CMYCFOXO",8,0.1,15,"CMYCFOXO_M8")
+dev.off()
+jpeg("CMYCFOXO_M8_A1.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(1,1,4,4.1,50,5,5.125,"CMYCFOXO",8,0.1,15,"CMYCFOXO_M8")
+dev.off()
 ```
 
-```{r}
-jpeg("M4M8.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM4",20,0.1,10,"M8")
-dev.off()
-plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM4",20,0.1,10,"M8")
-```
