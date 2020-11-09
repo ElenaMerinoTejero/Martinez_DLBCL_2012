@@ -49,8 +49,8 @@ setPars<-function(A_,bcr_,cd40_, type_){
   }
    else if(type_ == "CMYCFOXO")
   {
-    pars<-c(MuP=1E-6, MuB=2, MuI=0.1,MuF=1,MuC=1E-6,
-            SigmaP=9, SigmaB=100, SigmaI=2.6,SigmaF=2.6,SigmaC=2.6,
+    pars<-c(MuP=1E-6, MuB=2, MuI=0.1,MuF=2,MuC=0.4,
+            SigmaP=9, SigmaB=100, SigmaI=2.6,SigmaF=2.6,SigmaC=3,
             kP=1, kB=1, kI=1,kF=1,kC=1,  
             LambdaP=1, LambdaB=1, LambdaI=1, LambdaF=1,LambdaC=1,
             bcr0=bcr_ ,cd400=cd40_, A=A_)
@@ -59,9 +59,9 @@ setPars<-function(A_,bcr_,cd40_, type_){
      else if(type_ == "CMYCFOXO_M8")
   {
     pars<-c(MuP=1E-6, MuB=2, MuI=0.1*2 #M8 model
-            ,MuF=1,MuC=1E-6,
+            ,MuF=2,MuC=0.4,
             SigmaP=9, SigmaB=100, SigmaI=2.6*2 #M8 model
-            ,SigmaF=2.6,SigmaC=2.6,
+            ,SigmaF=2.6,SigmaC=3,
             kP=1, kB=1, kI=1,kF=1,kC=1,  
             LambdaP=1, LambdaB=1, LambdaI=1, LambdaF=1,LambdaC=1,
             bcr0=bcr_ ,cd400=cd40_, A=A_)
@@ -74,7 +74,7 @@ setPars<-function(A_,bcr_,cd40_, type_){
 yini<-function(type_){
   if(type_ == "CMYCFOXO"||type_ == "CMYCFOXO_M8")
   {
-    yini<-c(IRF4=0,CMYC=0,FOXO1=1,BLIMP1=0,BCL6=5)  # ORDER OF INITIAL CONDITIONS SHOULD ALWAYS MATCH ORDER OF ODE EQUATIONS!
+    yini<-c(IRF4=0,CMYC=0,FOXO1=2,BLIMP1=0,BCL6=5)  # ORDER OF INITIAL CONDITIONS SHOULD ALWAYS MATCH ORDER OF ODE EQUATIONS!
   }
   else
   {
@@ -216,7 +216,7 @@ plotResults_bw<-function(A_,bcr_,bcrini_,bcrend_,cd40_,cd40ini_,cd40end_,typeGRN
 ```{r}
 #plotting Antoines Network (with his parameters)
 jpeg("AntoinesBCLnetwork.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,12,45,45.1,5,60,60.1,"CMYCFOXO",200,0.1,15,"CMYCFOXO")
+plotResults(0,12,45,45.1,5,60,60.1,"CMYCFOXO",200,0.1,20,"CMYCFOXO")
 dev.off()
 
 ```
@@ -224,10 +224,10 @@ dev.off()
 
 ```{r}
 jpeg("Healthy_A1.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(1,1,4,4.1,50,5,5.125,"GRN",15,0.01,15,"Healthy")
+plotResults(1,1,4,4.1,50,5,5.125,"GRN",14,0.01,20,"Healthy")
 dev.off()
 jpeg("M8_A1.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(1,1,4,4.1,50,5,5.125,"GRN",15,0.01,15,"M8")
+plotResults(1,1,4,4.1,50,5,5.125,"GRN",14,0.01,20,"M8")
 dev.off()
 ```
 ```{r}
@@ -235,14 +235,13 @@ dev.off()
 #PC differentiation can take between 10 and 34 hours (recycling + divisions)
 
 jpeg("CMYCFOXO_A0.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,1,4,4.1,50,5,5.125,"CMYCFOXO",14,0.1,15,"CMYCFOXO")
+plotResults(0,1,4,4.1,50,5,5.125,"CMYCFOXO",14,0.1,20,"CMYCFOXO")
 dev.off()
 jpeg("CMYCFOXO_A0.5.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0.5,1,4,4.1,50,5,5.125,"CMYCFOXO",8,0.1,15,"CMYCFOXO")
-plotResults(0.5,1,4,4.1,50,5,5.125,"CMYCFOXO",14,0.1,15,"CMYCFOXO")
+plotResults(0.5,1,4,4.1,50,5,5.125,"CMYCFOXO",14,0.1,20,"CMYCFOXO")
 dev.off()
 jpeg("CMYCFOXO_A1.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(1,1,4,4.1,50,5,5.125,"CMYCFOXO",8,0.1,15,"CMYCFOXO")
+plotResults(1,1,4,4.1,50,5,5.125,"CMYCFOXO",14,0.1,20,"CMYCFOXO")
 dev.off()
 
 ```
@@ -250,13 +249,13 @@ dev.off()
 
 ```{r}
 jpeg("CMYCFOXO_M8_A0.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0,1,4,4.1,50,5,5.125,"CMYCFOXO",8,0.1,15,"CMYCFOXO_M8")
+plotResults(0,1,4,4.1,50,5,5.125,"CMYCFOXO",14,0.1,20,"CMYCFOXO_M8")
 dev.off()
 jpeg("CMYCFOXO_M8_A0.5.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(0.5,1,4,4.1,50,5,5.125,"CMYCFOXO",8,0.1,15,"CMYCFOXO_M8")
+plotResults(0.5,1,4,4.1,50,5,5.125,"CMYCFOXO",14,0.1,20,"CMYCFOXO_M8")
 dev.off()
 jpeg("CMYCFOXO_M8_A1.jpeg", width = 5, height = 4, units = 'in', res = 300)
-plotResults(1,1,4,4.1,50,5,5.125,"CMYCFOXO",8,0.1,15,"CMYCFOXO_M8")
+plotResults(1,1,4,4.1,50,5,5.125,"CMYCFOXO",14,0.1,20,"CMYCFOXO_M8")
 dev.off()
 ```
 
