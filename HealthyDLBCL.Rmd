@@ -22,6 +22,16 @@ setPars<-function(A_,bcr_,cd40_, type_){
             bcr0=bcr_ ,cd400=cd40_)
     return(pars) 
   }
+   else if(type_ == "New_Healthy") # simplest Martinez model IRF4-->IRF4
+  {
+    
+    pars<-c(MuP=0.562299, MuB= 0.140220, MuI=0.9924,
+            SigmaP=13.494434, SigmaB=285.815650, SigmaI=10.1582, 
+            kP=1, kB=1, kI=6.1994, 
+            LambdaP=1, LambdaB=1, LambdaI=1, 
+            bcr0=bcr_ ,cd400=cd40_)
+    return(pars) 
+  }
   else if(type_ == "M2")
   {
     
@@ -57,7 +67,7 @@ setPars<-function(A_,bcr_,cd40_, type_){
 
 ```{r}
 yini<-function(type_){
-  yini<-c(BLIMP1=0,BCL6=5,IRF4=0) 
+  yini<-c(BLIMP1=0,BCL6=3,IRF4=1) 
   return(yini)
 }
 ```
@@ -284,4 +294,11 @@ jpeg("M4M8.jpeg", width = 5, height = 4, units = 'in', res = 300)
 plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM4",20,0.1,10,"M8")
 dev.off()
 plotResults(0,1,4,4.1,50,5,5.125,"DLBCLM4",20,0.1,10,"M8")
+```
+
+```{r}
+jpeg("New_healthy.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,10,25,26,20,29,30,"GRN",100,0.1,20,"New_Healthy")
+dev.off()
+plotResults(0,10,25,26,20,29,30,"GRN",100,0.1,20,"New_Healthy")
 ```
