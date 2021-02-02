@@ -1,0 +1,279 @@
+---
+title: "Healthy_Asymmetric_Division_TFs"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r}
+library("deSolve", lib.loc="/usr/local/lib/R/3.5/site-library")
+```
+
+#In yini, define initial TF conditions as funcion of type_ (polarity of TFs).
+```{r}
+yini<-function(type_){
+  PC<-c(0,0,0) #B-cell at CB state
+  PC_divided<-PC*type_
+  yini<-c(BLIMP1=PC_divided[1],BCL6=PC_divided[2],IRF4=PC_divided[3])
+
+  return(yini)
+}
+```
+
+#In setPars, define parameters as function of the type of model desired to run (type_) 
+#Affinity and bcr/cd40 signals can also be defined externally (A_,bcr_,cd40_)
+#This function will be called at different timesteps in experiment function(below).
+```{r}
+setPars<-function(A_,bcr_,cd40_, type_){
+  
+  if(type_ == "Healthy")
+  {
+    
+    pars<-c(MuP=1E-6, MuB=2, MuI=0.1,
+            SigmaP=9, SigmaB=100, SigmaI=2.6, 
+            kP=1, kB=1, kI=1, 
+            LambdaP=1, LambdaB=1, LambdaI=1, 
+            bcr0=bcr_ ,cd400=cd40_)
+    return(pars) 
+  }
+}
+```
+
+#In setGRN, define desired model to run (type_)
+#Healthy model is described in Martinez et al., 2012. 
+```{r}
+setGRN<-function(type_)
+{
+  if(type_ == "GRN") # Healthy Martinez model
+  {
+    GRN<-function(t,y,pars){
+      with(as.list(c(y,pars)), {
+        dBLIMP1 <- MuP + SigmaP*(kB^2/(kB^2 + BCL6^2)) + SigmaP*(IRF4^2/(kI^2 + IRF4^2)) - LambdaP*BLIMP1 
+        dBCL6 <- MuB + SigmaB*(kB^2/(kB^2 + BCL6^2))*(kP^2/(kP^2 + BLIMP1^2))*(kI^2/(kI^2 + IRF4^2)) - (LambdaB + bcr0*kB^2/(kB^2 + BCL6^2))*BCL6
+        dIRF4 <- MuI + SigmaI*(IRF4^2/(kI^2 + IRF4^2)) + cd400*(kB^2/(kB^2 + BCL6^2)) - LambdaI*IRF4
+        return(list(c(dBLIMP1,dBCL6,dIRF4)))
+      })}
+  }
+  return(GRN)
+  }
+```
+
+#Define arguments to (Test experiment) lines.
+```{r}
+ A_=0
+ bcr_=0
+ bcrini_=0
+ bcrend_=0
+ cd40_=0
+ cd40ini_=0
+ cd40end_=0
+ typeGRN_="GRN"
+ xmax_=10
+ xsteps_=0.01
+ ymax_=10
+ typePars_="Healthy"
+ typeYini_=0
+ i=3
+```
+
+# In experiment function, with given time boundaries of simulation as well as affinity and bcr/cd40 maximal values and initial conditions, calculate dnamics of BLIMP1, BCL6, IRF4 (returned in data).
+```{r}
+experiment<-function(A_,bcr_,bcrini_,bcrend_,cd40_,cd40ini_,cd40end_,typeGRN_,xmax_,xsteps_,typePars_,typeYini_)
+{
+    times<-seq(from=0, to=xmax_-xsteps_, by= xsteps_)
+    
+    A<- c(rep(0, (xmax_/xsteps_)))# vector of zeros 
+    A <- replace(A,list((bcrini_/xsteps_):(bcrend_/xsteps_))[[1]],A_)#insert signals =1
+    A <- replace(A,list((cd40ini_/xsteps_):(cd40end_/xsteps_))[[1]],A_)#insert signals =1
+    
+    bcr <- c(rep(0, (xmax_/xsteps_)))# vector of zeros 
+    bcr <- replace(bcr,list((bcrini_/xsteps_):(bcrend_/xsteps_))[[1]],bcr_)
+    
+    cd40 <- c(rep(0, (xmax_/xsteps_)))# vector of zeros 
+    cd40 <- replace(cd40,list((cd40ini_/xsteps_):(cd40end_/xsteps_))[[1]], cd40_)
+    
+    yini<- yini(typeYini_) #Initial condition at time=0
+    
+    data<-data.frame(ode(yini,c(times[[1]],times[[2]]), setGRN(typeGRN_), setPars(A[[2]],bcr[[2]],cd40[[2]],typePars_))) #Calculate TF levels in first time step.
+    for (i in seq_along(times)) 
+    {
+      if(i > 2) #Start at second time step.
+      {
+        yini<-c(replace(yini,list(seq_along(data[-1]))[[1]],as.numeric(data[i-1,][-1]))) #Replace yini with previous TF levels in data for current time step calculation.
+        ODE<-data.frame(lsode(yini,c(times[[i-1]],times[[i]]), setGRN(typeGRN_), setPars(A[[i]],bcr[[i]],cd40[[i]],typePars_))) #Calculate TF levels in current time step
+        data[i,]<-ODE[-1,]#Add current time point calculation to data which will then be used as yini in next iteration.
+        A[[i]]<-A[[i]]
+      }
+    }
+    data$Affinity<-A
+    data$BCR<-bcr
+    data$CD40<-cd40
+  return(data)
+}
+```
+
+
+#Plot results returned from experiment.
+```{r}
+plotResults<-function(A_,bcr_,bcrini_,bcrend_,cd40_,cd40ini_,cd40end_,typeGRN_,xmax_,xsteps_,ymax_,typePars_,typeYini_)
+{
+  data_<-experiment(A_,bcr_,bcrini_,bcrend_,cd40_,cd40ini_,cd40end_,typeGRN_,xmax_,xsteps_,typePars_,typeYini_)
+  pars<- setPars(A_,bcr_,cd40_,typePars_)
+  colourlist<-c("orange","green","black","purple","red","blue","pink","gold")
+  plot(data_$time, data_[[2]],xlab="time (4hrs)",
+       ylab="Concentration (10^-8 M)",
+       type="l", col=colourlist[[1]], 
+       ylim=c(0,max(ymax_)),xlim=c(0,max(xmax_)))
+
+  for (i in 2:(length(data_)-2))  # Skip first transcription factor in data to plot remaining lines
+  {
+    lines(data_$time,data_[[i]],col=colourlist[[i-1]])
+  }
+  lines(data_$time,data_[[length(data_)-1]]/(cd40_/ymax_),col=colourlist[[5]])  
+  lines(data_$time,data_[[length(data_)]]/(cd40_/ymax_),col=colourlist[[6]])
+  legend(xmax_-5,ymax_,c(names(data_)[2],names(data_)[3],names(data_)[4],names(data_)[5],names(data_)[6]), text.col = c(colourlist[[1]],colourlist[[2]],colourlist[[3]],colourlist[[4]],colourlist[[5]]),bty="n")
+}
+```
+
+
+#Results
+
+#General Dynamics BLIMP1, BCL6 and IRF4 for highest affinity CD40 signal. 
+```{r}
+yini<-function(type_){
+  PC<-c(0,0,0) #Bcell CB state
+  PC_divided<-PC*type_ #type_defines TF polarity after division. Common for all TFs.
+  yini<-c(BLIMP1=PC_divided[1],BCL6=PC_divided[2],IRF4=PC_divided[3])
+
+  return(yini)
+}
+
+plotResults(0,1,1,1.1,50,2,2.125,"GRN",10,0.01,10,"Healthy",0)
+```
+
+##EXAMPLE 1 explaining Figure 1 Jiaojiao's results
+#For starting TF concentrations (1.5,3,0.35; around 8 hours after recieving highest affinity signal): 
+
+#For (0/1, 0.1/0.9 ) TF polarities, one of the daughter cells goes to the low state and the other one to the high BLIMP1 state. 
+#Note it takes more time for BLIMP1 to increase the lower the polarity.
+#For (0.25/0.75 AND 0.5/0.5) TF polarity, both of the daughter cells go to the LOW BLIMP1 state. 
+#This explains there are More MCs being produced in Simulation 3,6,7. 
+
+```{r}
+yini<-function(type_){
+  PC<-c(1.5,3,0.35) #Bcell transitioning to PC
+  PC_divided<-PC*type_ #Type_defines the polarity common for all TFs at the start of simulation.
+  yini<-c(BLIMP1=PC_divided[1],BCL6=PC_divided[2],IRF4=PC_divided[3])
+
+  return(yini)
+}
+
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.1)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.25)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.5)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.75)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.9)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",1)
+
+```
+
+##EXAMPLE 2 explaining Figure 1 Jiaojiao's results
+#For starting TF concentrations (8,2,2; around 38 hours after recieving highest affinity signal.) 
+
+#For (0/1, 0.1/0.9 ) TF polarities, one of the daughter cells goes to the low state and the other one to the high BLIMP1 state.
+#For (0.25/0.75, 0.5/0.5) polarities, both of the daughter cells go to the high BLIMP1 state, Yet it takes more time for the cell that goes to high BLIMP1 state to reach the theshold the lower the TF polarity.
+#This explains:
+#   There are More MCs being produced the lower the TF polarity. 
+#   Other factors are important such as: The time left for the cell to be outputed and different combination of divisions a cell undergoes. 
+
+```{r}
+yini<-function(type_){
+  PC<-c(8,2,2) #B-cell at PC state
+  PC_divided<-PC*type_ #Type_defines the polarity common for all TFs at the start of simulation.
+  yini<-c(BLIMP1=PC_divided[1],BCL6=PC_divided[2],IRF4=PC_divided[3])
+
+  return(yini)
+}
+
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.1)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.25)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.5)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.75)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.9)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",1)
+
+```
+
+
+##EXAMPLE 1 explaining Figure 4 Jiaojiao's results.
+# Starting from a B-cell at PC state, 
+# Tested all polarities of BLIMP1 (0 to 1)
+# Eventually all lead to produce a PC. 
+# Yet only highest TF polarity (1) produced imediatly an PC. 
+# The lower the polarity the more time it takes for B cells to reach the Hight BlIMP1 state.
+
+```{r}
+yini<-function(type_){
+  PC<-c(8*type_,2,2) #B-cell at PC state. Note only BLIMP1 is divided (BCL6 and IRF4 are fixed)
+  PC_divided<-PC
+  yini<-c(BLIMP1=PC_divided[1],BCL6=PC_divided[2],IRF4=PC_divided[3])
+
+  return(yini)
+}
+
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.1)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.25)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.75)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.9)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",1)
+
+```
+
+##EXAMPLE 2 explaining Figure 4 Jiaojiao's results
+# Starting from a B-cell at PC state, 
+# Tested all polarities of IRF4 (0 to 1)
+# Polarities 0,0.1 lead to MBC while polarities (0.25-1) imediately lead to PC high cell. Explaining the slight decrease in MBCs when decreasing IRF4 polarity seen in results in figure 4 Asymmetric Division JiaoJiao.
+
+```{r}
+yini<-function(type_){
+  PC<-c(8,2,2*type_) #B-cell at PC state. Note only IRF4 is divided (BCL6 and BLIMP1 are fixed)
+  PC_divided<-PC
+  yini<-c(BLIMP1=PC_divided[1],BCL6=PC_divided[2],IRF4=PC_divided[3])
+
+  return(yini)
+}
+
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.1)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.25)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.75)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.9)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",1)
+
+```
+
+##EXAMPLE 3 exlaining Figure 4 Jiaojiao's results
+# Starting from a B-cell at PC state, 
+# Tested all polarities of BCL6 (0 to 1)
+# For all polarities of BCL6 all B cells started at PC state confirming it didnt have much effect on BLIMP1 levels.
+
+```{r}
+yini<-function(type_){
+  PC<-c(8,2*type_,2) #B-cell at PC state. Note only BCL6 is divided (IRF4 and BLIMP1 are fixed)
+  PC_divided<-PC
+  yini<-c(BLIMP1=PC_divided[1],BCL6=PC_divided[2],IRF4=PC_divided[3])
+
+  return(yini)
+}
+
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.1)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.25)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.75)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.9)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",1)
+
+
+```
