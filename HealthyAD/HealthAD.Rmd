@@ -32,7 +32,7 @@ setPars<-function(A_,bcr_,cd40_, type_){
             SigmaP=9, SigmaB=100, SigmaI=2.6, 
             kP=1, kB=1, kI=1, 
             LambdaP=1, LambdaB=1, LambdaI=1, 
-            bcr0=bcr_ ,cd400=cd40_)
+            bcr0=bcr_ ,cd400=cd40_,A=A_)
     return(pars) 
   }
 }
@@ -49,7 +49,7 @@ setGRN<-function(type_)
       with(as.list(c(y,pars)), {
         dBLIMP1 <- MuP + SigmaP*(kB^2/(kB^2 + BCL6^2)) + SigmaP*(IRF4^2/(kI^2 + IRF4^2)) - LambdaP*BLIMP1 
         dBCL6 <- MuB + SigmaB*(kB^2/(kB^2 + BCL6^2))*(kP^2/(kP^2 + BLIMP1^2))*(kI^2/(kI^2 + IRF4^2)) - (LambdaB + bcr0*kB^2/(kB^2 + BCL6^2))*BCL6
-        dIRF4 <- MuI + SigmaI*(IRF4^2/(kI^2 + IRF4^2)) + cd400*(kB^2/(kB^2 + BCL6^2)) - LambdaI*IRF4
+        dIRF4 <- MuI + SigmaI*(IRF4^2/(kI^2 + IRF4^2)) + cd400*A*(kB^2/(kB^2 + BCL6^2)) - LambdaI*IRF4
         return(list(c(dBLIMP1,dBCL6,dIRF4)))
       })}
   }
@@ -82,7 +82,7 @@ experiment<-function(A_,bcr_,bcrini_,bcrend_,cd40_,cd40ini_,cd40end_,typeGRN_,xm
     times<-seq(from=0, to=xmax_-xsteps_, by= xsteps_)
     
     A<- c(rep(0, (xmax_/xsteps_)))# vector of zeros 
-    A <- replace(A,list((bcrini_/xsteps_):(bcrend_/xsteps_))[[1]],A_)#insert signals =1
+#    A <- replace(A,list((bcrini_/xsteps_):(bcrend_/xsteps_))[[1]],A_)#insert signals =1
     A <- replace(A,list((cd40ini_/xsteps_):(cd40end_/xsteps_))[[1]],A_)#insert signals =1
     
     bcr <- c(rep(0, (xmax_/xsteps_)))# vector of zeros 
@@ -118,7 +118,7 @@ plotResults<-function(A_,bcr_,bcrini_,bcrend_,cd40_,cd40ini_,cd40end_,typeGRN_,x
 {
   data_<-experiment(A_,bcr_,bcrini_,bcrend_,cd40_,cd40ini_,cd40end_,typeGRN_,xmax_,xsteps_,typePars_,typeYini_)
   pars<- setPars(A_,bcr_,cd40_,typePars_)
-  colourlist<-c("orange","green","black","purple","red","blue","pink","gold")
+  colourlist<-c("orange","green","black","purple","red","blue","purple","pink")
   plot(data_$time, data_[[2]],xlab="time (4hrs)",
        ylab="Concentration (10^-8 M)",
        type="l", col=colourlist[[1]], 
@@ -130,7 +130,10 @@ plotResults<-function(A_,bcr_,bcrini_,bcrend_,cd40_,cd40ini_,cd40end_,typeGRN_,x
   }
   lines(data_$time,data_[[length(data_)-1]]/(cd40_/ymax_),col=colourlist[[5]])  
   lines(data_$time,data_[[length(data_)]]/(cd40_/ymax_),col=colourlist[[6]])
-  legend(xmax_-5,ymax_,c(names(data_)[2],names(data_)[3],names(data_)[4],names(data_)[5],names(data_)[6]), text.col = c(colourlist[[1]],colourlist[[2]],colourlist[[3]],colourlist[[4]],colourlist[[5]]),bty="n")
+  abline(h=8, col=colourlist[[1]],lty=2)
+  #legend(1.5,ymax_+0.5, c(names(data_)[2],names(data_)[3],names(data_)[4]), text.col = c(colourlist[[1]],colourlist[[2]],colourlist[[3]],colourlist[[4]]),bty="n")
+  
+    #legend(-0.5,ymax_+0.5, c(names(data_)[5],names(data_)[6],names(data_)[7]), text.col = c(colourlist[[7]],colourlist[[5]],colourlist[[6]]),bty="n")
 }
 ```
 
@@ -146,8 +149,11 @@ yini<-function(type_){
 
   return(yini)
 }
+jpeg("AD_Healthy.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(1,1,1,1.1,50,2,2.125,"GRN",10,0.01,12,"Healthy",0)
+dev.off()
 
-plotResults(0,1,1,1.1,50,2,2.125,"GRN",10,0.01,10,"Healthy",0)
+plotResults(1,1,1,1.1,50,2,2.125,"GRN",10,0.01,12,"Healthy",0)
 ```
 
 ##EXAMPLE 1 explaining Figure 1 Jiaojiao's results
@@ -166,15 +172,42 @@ yini<-function(type_){
 
   return(yini)
 }
+jpeg("AllTFs_AD_BC_0.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0)
+dev.off()
 
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.1)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.25)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.5)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.75)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.9)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",1)
+jpeg("AllTFs_AD_BC_01_All.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.1)
+dev.off()
 
+jpeg("AllTFs_AD_BC_025_All.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.25)
+dev.off()
+
+jpeg("AllTFs_AD_BC_05.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.5)
+dev.off()
+
+jpeg("AllTFs_AD_BC_075.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.75)
+dev.off()
+
+jpeg("AllTFs_AD_BC_09.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.9)
+dev.off()
+
+jpeg("AllTFs_AD_BC_1.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",1)
+dev.off()
+
+
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.1)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.25)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.5)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.75)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.9)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",1)
 ```
 
 ##EXAMPLE 2 explaining Figure 1 Jiaojiao's results
@@ -194,15 +227,40 @@ yini<-function(type_){
 
   return(yini)
 }
+jpeg("AllTFs_AD_PC_0.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0)
+dev.off()
 
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.1)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.25)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.5)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.75)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.9)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",1)
+jpeg("AllTFs_AD_PC_01.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.1)
+dev.off()
 
+jpeg("AllTFs_AD_PC_025.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.25)
+dev.off()
+
+jpeg("AllTFs_AD_PC_05.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.5)
+dev.off()
+
+jpeg("AllTFs_AD_PC_075.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.75)
+dev.off()
+
+jpeg("AllTFs_AD_PC_09.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.9)
+dev.off()
+jpeg("AllTFs_AD_PC_1.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",1)
+dev.off()
+
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.1)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.25)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.5)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.75)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.9)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",1)
 ```
 
 
@@ -222,13 +280,40 @@ yini<-function(type_){
   return(yini)
 }
 
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.1)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.25)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.75)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.9)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",1)
+jpeg("BLIMP1_AD_0.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0)
+dev.off()
 
+jpeg("BLIMP1_AD_01.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.1)
+dev.off()
+
+jpeg("BLIMP1_AD_025.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.25)
+dev.off()
+
+jpeg("BLIMP1_AD_05.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.5)
+dev.off()
+
+jpeg("BLIMP1_AD_075.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.75)
+dev.off()
+
+jpeg("BLIMP1_AD_09.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.9)
+dev.off()
+
+jpeg("BLIMP1_AD_1.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",1)
+dev.off()
+
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.1)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.25)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.75)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.9)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",1)
 ```
 
 ##EXAMPLE 2 explaining Figure 4 Jiaojiao's results
@@ -245,13 +330,40 @@ yini<-function(type_){
   return(yini)
 }
 
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.1)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.25)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.75)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.9)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",1)
+jpeg("IRF4_AD_0.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0)
+dev.off()
 
+jpeg("IRF4_AD_01.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.1)
+dev.off()
+
+jpeg("IRF4_AD_025.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.25)
+dev.off()
+
+jpeg("IRF4_AD_05.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.5)
+dev.off()
+
+jpeg("IRF4_AD_075.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.75)
+dev.off()
+
+jpeg("IRF4_AD_09.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.9)
+dev.off()
+
+jpeg("IRF4_AD_1.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",1)
+dev.off()
+
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.1)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.25)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.75)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.9)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",1)
 ```
 
 ##EXAMPLE 3 exlaining Figure 4 Jiaojiao's results
@@ -268,12 +380,38 @@ yini<-function(type_){
   return(yini)
 }
 
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.1)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.25)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.75)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",0.9)
-plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,10,"Healthy",1)
+jpeg("BCL6_AD_0.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0)
+dev.off()
 
+jpeg("BCL6_AD_01.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.1)
+dev.off()
 
+jpeg("BCL6_AD_025.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.25)
+dev.off()
+
+jpeg("BCL6_AD_05.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.5)
+dev.off()
+
+jpeg("BCL6_AD_075.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.75)
+dev.off()
+
+jpeg("BCL6_AD_09.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.9)
+dev.off()
+
+jpeg("BCL6_AD_1.jpeg", width = 5, height = 4, units = 'in', res = 300)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",1)
+dev.off()
+
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.1)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.25)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.75)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",0.9)
+plotResults(0,0,1,1.1,0,2,2.125,"GRN",10,0.01,12,"Healthy",1)
 ```
